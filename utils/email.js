@@ -1,6 +1,8 @@
 const nodemailer = require('nodemailer');
 const pug = require('pug');
-const htmlToText = require('html-to-text');
+const { convert } = require('html-to-text');
+const path = require('path');
+
 module.exports = class Email {
   constructor(user, url) {
     this.to = user.email;
@@ -12,7 +14,13 @@ module.exports = class Email {
   newTransport() {
     if (process.env.NODE_ENV === 'production') {
       // Sendgrid
-      return 1;
+      return nodemailer.createTransport({
+        service: 'SendGrid',
+        auth: {
+          user: process.env.SENDGRID_USERNAME,
+          pass: process.env.SENDGRID_PASSWORD,
+        },
+      });
     }
 
     return nodemailer.createTransport({
@@ -25,26 +33,35 @@ module.exports = class Email {
     });
   }
 
-  // Send actual email
+  // Send the actual email
   async send(template, subject) {
     // 1) Render HTML based on a pug template
-    const html = pug.renderFile(`${__dirname}/../views/email/${template}.pug`, {
+
+    const filePath = path.join(
+      __dirname,
+      '..',
+      'views',
+      'email',
+      `${template}.pug`,
+    );
+    const html = pug.renderFile(filePath, {
       firstName: this.firstName,
       url: this.url,
       subject,
     });
 
-    //2) Defune email options
+    // 2) Define email options
+    const text = convert(html);
     const mailOptions = {
       from: this.from,
       to: this.to,
       subject,
       html,
-      text: htmlToText.fromString(html),
+      text,
     };
 
     // 3) Create a transport and send email
-    await this.newTransport.sendMail(mailOptions);
+    await this.newTransport().sendMail(mailOptions);
   }
 
   async sendWelcome() {

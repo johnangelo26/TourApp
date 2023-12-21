@@ -2,7 +2,7 @@ const path = require('path');
 const express = require('express');
 const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
-// const helmet = require('helmet');
+const helmet = require('helmet');
 const mongoSanitize = require('express-mongo-sanitize');
 const xss = require('xss-clean');
 const hpp = require('hpp');
@@ -13,6 +13,7 @@ const globalErrorHandler = require('./controllers/errorController');
 const tourRouter = require('./routes/tourRoutes');
 const userRouter = require('./routes/userRoutes');
 const reviewRouter = require('./routes/reviewRoutes');
+const bookingRouter = require('./routes/bookingRoutes');
 const viewRouter = require('./routes/viewRoutes');
 
 const app = express();
@@ -25,7 +26,51 @@ app.set('views', path.join(__dirname, 'views'));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Security security HTTP headers
-// app.use(helmet());
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      useDefaults: true,
+      directives: {
+        'default-src': ["'self'"],
+        'script-src': [
+          "'self'",
+          'https://api.mapbox.com',
+          'https://js.stripe.com',
+        ],
+        'style-src': [
+          "'self'",
+          'https://api.mapbox.com',
+          'https://fonts.googleapis.com',
+          "'unsafe-inline'",
+        ],
+        'img-src': [
+          "'self'",
+          'data:',
+          'https://*.tiles.mapbox.com',
+          'https://api.mapbox.com',
+        ],
+        'font-src': ["'self'", 'https://fonts.gstatic.com'],
+        'connect-src': [
+          "'self'",
+          'ws://localhost:*',
+          'ws://127.0.0.1:*',
+          'http://127.0.0.1:*',
+          'http://localhost:*',
+          'https://*.tiles.mapbox.com',
+          'https://api.mapbox.com',
+          'https://events.mapbox.com',
+          'http://localhost:3000',
+          'ws://localhost:55595',
+        ],
+        'child-src': ['blob:', 'https://js.stripe.com'],
+        'worker-src': ['blob:'],
+      },
+    },
+
+    crossOriginEmbedderPolicy: false,
+  }),
+);
+
 if (process.env.NODE_ENV === 'development') {
   app.use(morgan('dev'));
 }
@@ -75,6 +120,7 @@ app.use('/', viewRouter);
 app.use('/api/v1/tours', tourRouter);
 app.use('/api/v1/users', userRouter);
 app.use('/api/v1/reviews', reviewRouter);
+app.use('/api/v1/booking', bookingRouter);
 
 app.all('*', (req, res, next) => {
   next(new AppError(`Can't find ${req.originalUrl} on this server!`, 404));
