@@ -7,6 +7,7 @@ const mongoSanitize = require('express-mongo-sanitize');
 const xss = require('xss-clean');
 const hpp = require('hpp');
 const cookieParser = require('cookie-parser');
+const compression = require('compression');
 
 const AppError = require('./utils/appError');
 const globalErrorHandler = require('./controllers/errorController');
@@ -29,48 +30,51 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use(
   helmet({
     contentSecurityPolicy: {
-      useDefaults: true,
       directives: {
-        'default-src': ["'self'"],
-        'script-src': [
+        defaultSrc: ["'self'", 'data:', 'blob:', 'https:', 'ws:'],
+        baseUri: ["'self'"],
+        fontSrc: ["'self'", 'https:', 'data:'],
+        scriptSrc: [
           "'self'",
-          'https://api.mapbox.com',
+          'https:',
+          'http:',
+          'blob:',
+          'https://*.mapbox.com',
           'https://js.stripe.com',
+          'https://m.stripe.network',
+          'https://*.cloudflare.com',
         ],
-        'style-src': [
-          "'self'",
-          'https://api.mapbox.com',
-          'https://fonts.googleapis.com',
-          "'unsafe-inline'",
-        ],
-        'img-src': [
+        frameSrc: ["'self'", 'https://js.stripe.com'],
+        objectSrc: ["'none'"],
+        styleSrc: ["'self'", 'https:', "'unsafe-inline'"],
+        workerSrc: [
           "'self'",
           'data:',
-          'https://*.tiles.mapbox.com',
-          'https://api.mapbox.com',
-        ],
-        'font-src': ["'self'", 'https://fonts.gstatic.com'],
-        'connect-src': [
-          "'self'",
-          'ws://localhost:*',
-          'ws://127.0.0.1:*',
-          'http://127.0.0.1:*',
-          'http://localhost:*',
+          'blob:',
           'https://*.tiles.mapbox.com',
           'https://api.mapbox.com',
           'https://events.mapbox.com',
-          'http://localhost:3000',
-          'ws://localhost:55595',
+          'https://m.stripe.network',
         ],
-        'child-src': ['blob:', 'https://js.stripe.com'],
-        'worker-src': ['blob:'],
+        childSrc: ["'self'", 'blob:'],
+        imgSrc: ["'self'", 'data:', 'blob:'],
+        formAction: ["'self'"],
+        connectSrc: [
+          "'self'",
+          "'unsafe-inline'",
+          'data:',
+          'blob:',
+          'https://*.stripe.com',
+          'https://*.mapbox.com',
+          'https://*.cloudflare.com/',
+          'https://bundle.js:*',
+          'ws://127.0.0.1:*/',
+        ],
+        upgradeInsecureRequests: [],
       },
     },
-
-    crossOriginEmbedderPolicy: false,
   }),
 );
-
 if (process.env.NODE_ENV === 'development') {
   app.use(morgan('dev'));
 }
@@ -107,6 +111,8 @@ app.use(
     ],
   }),
 );
+
+app.use(compression());
 
 // Test middleware
 app.use((req, res, next) => {
